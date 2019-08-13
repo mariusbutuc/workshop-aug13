@@ -16,6 +16,41 @@
   <script type="text/javascript" src="helpers/renderers.lib.js"></script>
   <script type="text/javascript">
 
+    // Neuron
+    class Neuron {
+      bias;
+      weights;
+      activatorFn = function (x) {
+        throw new Error('Not implemented')
+      }
+
+      activate (inputs = []) {
+        let output = 0;
+        let buffer = [];
+
+        for (let i = 0; i < inputs.length; i++) {
+          buffer[i] = inputs[i] * this.weights[i];
+        }
+
+        for (let b = 0; b < buffer.length; b++) {
+          output = output + buffer[b]
+        }
+
+        output = output + this.bias;
+
+        let result = this.activatorFn(output);
+
+        return result;
+      }
+    }
+
+    const n = new Neuron();
+    n.weights = [0, 1];
+    n.bias = 0;
+    n.activatorFn = Math.sigmoid;
+
+    console.log('Run neural network against inputs');
+    console.log(n.activate([2, 3]));
   </script>
 </body>
 
