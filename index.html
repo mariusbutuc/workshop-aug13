@@ -24,7 +24,14 @@
         throw new Error('Not implemented')
       }
 
-      activate (inputs = []) {
+      constructor ( bias = 0, weights = [], activatorFn) {
+        // TODO: error checking
+        this.bias = bias;
+        this.weights = weights;
+        this.activatorFn = activatorFn;
+      }
+
+      sum (inputs = []) {
         let output = 0;
         let buffer = [];
 
@@ -38,16 +45,22 @@
 
         output = output + this.bias;
 
+        return output;
+      }
+
+      activate (inputs = []) {
+        let output = this.sum(inputs);
+
         let result = this.activatorFn(output);
 
         return result;
       }
     }
 
-    const n = new Neuron();
-    n.weights = [0, 1];
-    n.bias = 0;
-    n.activatorFn = Math.sigmoid;
+    const b = 0;
+    const w = [0, 1];
+
+    const n = new Neuron(b, w, Math.sigmoid);
 
     console.log('Run neural network against inputs');
     console.log(n.activate([2, 3]));
