@@ -15,6 +15,83 @@
 <body>
   <script type="text/javascript" src="helpers/renderers.lib.js"></script>
   <script type="text/javascript">
+    const B1 = 0;
+    const B2 = 1;
+    const B3 = 2;
+
+    const W1 = 0;
+    const W2 = 1;
+    const W3 = 2;
+    const W4 = 3;
+    const W5 = 4;
+    const W6 = 5;
+
+    const H1 = 0;
+    const H2 = 1;
+
+    const I1 = 0;
+    const I2 = 1;
+
+    class Network {
+      hidden;
+      output;
+      biases;
+      weights;
+
+      constructor (biases = [], weights = [], activatorFn) {
+        this.biases = biases;
+        this.weights = weights;
+
+        // Distribute the six weights between the first hidden layer, the
+        // second one, and the output layer
+        const h1Weights = [ this.weights[W1], this.weights[W2] ]
+        const h2Weights = [ this.weights[W3], this.weights[W4] ]
+        const o1Weights = [ this.weights[W5], this.weights[W6] ]
+
+        this.hidden = [
+          new Neuron(biases[B1], h1Weights, activatorFn),
+          new Neuron(biases[B2], h2Weights, activatorFn),
+        ];
+
+        this.output = new Neuron(biases[B3], o1Weights, activatorFn);
+      }
+
+      reload () {
+        // First hidden layer/neuron
+        this.hidden[H1].weights = [
+          this.weights[W1],
+          this.weights[W2],
+        ];
+
+        this.hidden[H1].bias = this.biases[B1];
+
+        // Second hidden layer/neuron
+        this.hidden[H2].weights = [
+          this.weights[W3],
+          this.weights[W4],
+        ];
+
+        this.hidden[H2].bias = this.biases[B2];
+
+        // Output layer/neuron
+        this.output.weights = [
+          this.weights[W5],
+          this.weights[W6],
+        ];
+
+        this.output.bias = this.biases[B3];
+      }
+
+      query (inputs = []) {
+        let params = [];
+
+        for (let h = 0; h < this.hidden.length; h++) {
+          params.push(this.hidden[h].activate(inputs));
+        }
+
+        return this.output.activate(params);
+      }
+    }
 
     // Neuron
     class Neuron {
@@ -57,13 +134,13 @@
       }
     }
 
-    const b = 0;
-    const w = [0, 1];
+    const b = [0, 0, 0];
+    const w = [1, 1, 1, 1, 1, 1];
 
-    const n = new Neuron(b, w, Math.sigmoid);
+    const nn = new Network(b, w, Math.sigmoid);
 
     console.log('Run neural network against inputs');
-    console.log(n.activate([2, 3]));
+    console.log(nn.query([2, 3]));
   </script>
 </body>
 
