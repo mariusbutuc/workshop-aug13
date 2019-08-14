@@ -28,6 +28,7 @@
 
     const H1 = 0;
     const H2 = 1;
+    const O1 = 2;
 
     const I1 = 0;
     const I2 = 1;
@@ -38,9 +39,12 @@
       biases;
       weights;
 
-      constructor (biases = [], weights = [], activatorFn) {
+      lossFn;
+
+      constructor (biases = [], weights = [], activatorFn, lossFn) {
         this.biases = biases;
         this.weights = weights;
+        this.lossFn = lossFn;
 
         // Distribute the six weights between the first hidden layer, the
         // second one, and the output layer
@@ -54,6 +58,119 @@
         ];
 
         this.output = new Neuron(biases[B3], o1Weights, activatorFn);
+      }
+
+      train (data = [], answers = [], iterations = 1000, rate = 0.1) {
+        let weightMultiplier = [];
+        let biasMultiplier = [];
+        let lossData = [];
+
+        for (let i = 0; i < iterations; i ++) {
+          for (let d = 0; d < data.length; d++) {
+            let h1Sum = this.hidden[H1].sum(data[d]);
+            let h1 = this.hidden[H1].activatorFn(h1Sum);
+
+            let h2Sum = this.hidden[H2].sum(data[d]);
+            let h2 = this.hidden[H2].activatorFn(h2Sum);
+
+            let o1Sum = this.output.sum([h1, h2]);
+            let o1 = this.output.activatorFn(o1Sum);
+
+            let pred = o1;
+
+            // Calculate wight multiplier + update weights
+            weightMultiplier[W1] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.outputPartialDeriv(this.weights[W5], o1Sum),
+              Trainer.hiddenPartialDeriv(data[d][I1], h1Sum),
+            );
+
+            this.weights[W1] = this.weights[W1] - (rate * weightMultiplier[W1]);
+
+            weightMultiplier[W2] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.outputPartialDeriv(this.weights[W5], o1Sum),
+              Trainer.hiddenPartialDeriv(data[d][I2], h1Sum),
+            );
+
+            this.weights[W2] = this.weights[W2] - (rate * weightMultiplier[W2]);
+
+            // *** Third weight multiplier, with weight six and first input
+            weightMultiplier[W3] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.outputPartialDeriv(this.weights[W6], o1Sum),
+              Trainer.hiddenPartialDeriv(data[d][I1], h2Sum),
+            );
+
+            this.weights[W3] = this.weights[W3] - (rate * weightMultiplier[W3]);
+
+            // **** Fourth weight multiplier, with weight six and second input
+            weightMultiplier[W4] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.outputPartialDeriv(this.weights[W6], o1Sum),
+              Trainer.hiddenPartialDeriv(data[d][I2], h2Sum),
+            );
+
+            this.weights[W4] = this.weights[W4] - (rate * weightMultiplier[W4]);
+
+            weightMultiplier[W5] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.outputPartialDeriv(h1, o1Sum),
+            );
+
+            this.weights[W5] = this.weights[W5] - (rate * weightMultiplier[W5]);
+
+            weightMultiplier[W6] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.outputPartialDeriv(h2, o1Sum),
+            );
+
+            this.weights[W6] = this.weights[W6] - (rate * weightMultiplier[W6]);
+
+            // Update bias multiplier an biases
+
+            biasMultiplier[H1] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.hiddenPartialDeriv(this.weights[W5], o1Sum),
+              Math.derivSigmoid(h1Sum),
+            );
+
+            this.biases[H1] = this.biases[H1] - (rate * biasMultiplier[H1]);
+
+            biasMultiplier[H2] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Trainer.hiddenPartialDeriv(this.weights[W6], o1Sum),
+              Math.derivSigmoid(h2Sum),
+            );
+
+            this.biases[H2] = this.biases[H2] - (rate * biasMultiplier[H2]);
+
+            biasMultiplier[O1] = Trainer.multiply(
+              Trainer.lossPartialDeriv(answers[d], pred),
+              Math.derivSigmoid(o1Sum),
+            );
+
+            this.biases[O1] = this.biases[O1] - (rate * biasMultiplier[O1]);
+
+            this.reload();
+          }
+
+          if (i % 10 === 0) {
+            let currentPrediction = [];
+
+            data.forEach((row) => {
+              currentPrediction.push(this.query(row));
+            });
+
+            let loss = this.lossFn(answers, currentPrediction);
+
+            lossData.push(loss);
+
+            console.log(`Iteration ${i}, loss: ${loss}`);
+          }
+        }
+
+        console.graph(lossData);
       }
 
       reload () {
@@ -137,10 +254,28 @@
     const b = [0, 0, 0];
     const w = [1, 1, 1, 1, 1, 1];
 
-    const nn = new Network(b, w, Math.sigmoid);
+    const weightShift = shifter(135);
+    const heightShift = shifter(66);
+    const data = [];
+    const answers = [];
 
-    console.log('Run neural network against inputs');
-    console.log(nn.query([2, 3]));
+    for (let d = 0; d < DATA.whg.length; d++) {
+      data.push([
+        weightShift(DATA.whg[d].weight),
+        heightShift(DATA.whg[d].height),
+      ]);
+
+      // Neural networks are what they eat. They "see" patterns where they do
+      // not exist. A lot of bias is baked in. How can you predict someone's
+      // gender from weight and height? Pre-programming the neural net with all
+      // the historical pre-bias that is inherent in our past data.
+      answers.push(DATA.whg[d].gender);
+    }
+
+    console.log('Neural Network start');
+    const nn = new Network(b, w, Math.sigmoid, Math.meanSquaredError);
+
+    nn.train(data, answers);
   </script>
 </body>
 
